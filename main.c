@@ -34,10 +34,6 @@ void buttonISR() {
     button_pressed = 1;
 }
 
-void handle_signal(int signal) {
-    running = 0;
-}
-
 void shiftOut(int data_pin, int clock, int bit, unsigned char data) {
     for (int i = 0; i < 8; i++) {
         if (bit == LSBFIRST) {
@@ -53,6 +49,26 @@ void shiftOut(int data_pin, int clock, int bit, unsigned char data) {
     }
 }
 
+const unsigned char cleanup = 0b11111111;
+
+void handle_cleanup() {
+    digitalWrite(STCP, LOW);
+    shiftOut(DS, SHCP, MSBFIRST, cleanup);
+    digitalWrite(STCP, HIGH);
+
+    pinMode(DS, INPUT);
+    pinMode(SHCP, INPUT);
+    pinMode(STCP, INPUT);
+    pinMode(BUTTON, INPUT);
+}
+
+void handle_signal(int signal) {
+    running = 0;
+
+    handle_cleanup();
+}
+
+// test function to get the basics down of displaying a number
 int display_zero() {
     if (wiringPiSetup() == -1) {
         printf("WiringPi setup failed\n");
@@ -87,7 +103,7 @@ int main() {
         return 1;
     }
 
-    pinMode(LED, OUTPUT);
+    // pinMode(LED, OUTPUT);
     pinMode(BUTTON, INPUT);
     pullUpDnControl(BUTTON, PUD_UP);
     
