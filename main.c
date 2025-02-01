@@ -7,7 +7,6 @@
 #define DS 0 // data pin
 #define STCP 3 // latch pin
 #define SHCP 2 // clock pin
-#define LED 5
 #define BUTTON 6
 
 #define LSBFIRST 0
@@ -113,7 +112,6 @@ int main() {
 
     while (running){
         if(button_pressed) {
-            digitalWrite(LED, HIGH);
             button_pressed = 0;
 
             delay(50);
@@ -129,8 +127,6 @@ int main() {
 
             printf("Dice should be: %d\n", diceval + 1);
             delay(300);
-        } else {
-            digitalWrite(LED, LOW);
         }
 
         delay(10);
