@@ -17,14 +17,18 @@ volatile int led_state = 0;
 volatile int running = 1;
 volatile int button_pressed = 0;
 
-// this is for wrong type of 7 segment display oopsie
+// CA 7 segment display
 const unsigned char segments[] = {
-    0b0110000,
-    0b1101110,
-    0b1111001,
-    0b0110011,
-    0b1011011,
-    0b1110000,
+    // 0b11000000, // 0
+    0b11111001, // 1
+    0b10100100, // 2
+    0b10110000, // 3
+    0b10011001, // 4
+    0b10010010, // 5
+    0b10000010, // 6
+    // 0b11111000, // 7
+    // 0b11000000, // 8
+    // 0b10011000, // 9
 };
 
 void buttonISR() {
@@ -50,7 +54,7 @@ void shiftOut(int data_pin, int clock, int bit, unsigned char data) {
     }
 }
 
-int main() {
+int display_zero() {
     if (wiringPiSetup() == -1) {
         printf("WiringPi setup failed\n");
         return 1;
@@ -68,8 +72,71 @@ int main() {
     shiftOut(DS, SHCP, 1, testPattern);
     digitalWrite(STCP, HIGH);
 
-    printf("Shifted out test pattern: 0x%02X\n", testPattern);
     sleep(5);
+
+    return 0;
+}
+
+/*
+    Has an error where a dice press gets skipped
+    interrupt may be counted as a debounce delay
+    resulting in the occasional bouble roll from 1 press?
+*/
+int main() {
+    if(wiringPiSetup() == -1) {
+        printf("wiringpi setup failed\n");
+        return 1;
+    }
+
+    pinMode(LED, OUTPUT);
+    pinMode(BUTTON, INPUT);
+    pullUpDnControl(BUTTON, PUD_UP);
+    
+    pinMode(DS, OUTPUT);
+    pinMode(SHCP, OUTPUT);
+    pinMode(STCP, OUTPUT);
+
+    digitalWrite(STCP, LOW);
+    shiftOut(DS, SHCP, MSBFIRST, 0x00);
+    digitalWrite(STCP, HIGH);
+
+    if (wiringPiISR(BUTTON, INT_EDGE_FALLING, &buttonISR) < 0) {
+        printf("Unable to setup ISR\n");
+        return 1;
+    }
+
+    srand(time(NULL));
+
+    printf("Roll Dice\n");
+
+    signal(SIGINT, handle_signal);
+
+    while (running){
+        if(button_pressed) {
+            digitalWrite(LED, HIGH);
+            button_pressed = 0;
+
+            delay(50);
+
+            int diceval = (rand() % 6);
+            unsigned char dice = segments[diceval];
+
+            digitalWrite(STCP, LOW);
+            shiftOut(DS, SHCP, MSBFIRST, dice);
+            digitalWrite(STCP, HIGH);
+            delayMicroseconds(10);
+            digitalWrite(STCP, LOW);
+
+            printf("Dice should be: %d\n", diceval + 1);
+            delay(300);
+        } else {
+            digitalWrite(LED, LOW);
+        }
+
+        delay(10);
+    }
+
+    printf("Stopped Program\n");
 
     return 0;
 }
